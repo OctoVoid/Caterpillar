@@ -1,14 +1,20 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using TMPro;
+
 
 public class CaterpillarControl : MonoBehaviour
 {
-    public float moveSpeed = 5;
+    public float moveSpeed;
     public float steerSpeed = 180;
     public int gap = 60;
-    public int bodySpeed = 5;
     public bool foodExists = false;
+    public TextMeshProUGUI scoreNumText;
+    //public TextMeshProUGUI diffMode;   //showing the difficulty while playing
+    public static string difficultyPicked;
+    public int score = 0;
 
     public GameObject bodySegment;
     public GameObject food;
@@ -19,17 +25,34 @@ public class CaterpillarControl : MonoBehaviour
     // Start is called before the first frame update
     void Start()  //new game
     {
-        bodyParts.Clear();
+        //diffMode.text = difficultyPicked;
+        score = 0;
         GrowBody();
         GrowBody();
         GrowBody();
         GrowBody();
-        FoodSpawn();  
+        FoodSpawn();
     }
 
     // Update is called once per frame
     void Update()
     {
+        
+        switch (difficultyPicked)
+        {
+            case "EASY":
+                EasyMode();
+                break;
+
+            case "NORMAL":
+                NormalMode();
+                break;
+
+            case "HARD":
+                HardMode();
+                break;
+        }
+
 
         // moving forward
         transform.position += transform.forward * moveSpeed * Time.deltaTime;
@@ -44,7 +67,7 @@ public class CaterpillarControl : MonoBehaviour
         {
             Vector3 point = movementHistory[Mathf.Min(index * gap, movementHistory.Count - 1)];
             Vector3 moveDirection = point - body.transform.position;
-            body.transform.position += moveDirection * bodySpeed * Time.deltaTime;
+            body.transform.position += moveDirection * moveSpeed * Time.deltaTime;
             body.transform.LookAt(point);
             index++;
         }
@@ -52,6 +75,11 @@ public class CaterpillarControl : MonoBehaviour
         // steering movement
         float steerDirection = Input.GetAxis("Horizontal");
         transform.Rotate(Vector3.up * steerDirection * steerSpeed * Time.deltaTime);
+
+        // updating score
+        scoreNumText.text = score.ToString();
+
+
     }
 
     // Growing caterpillar
@@ -68,7 +96,7 @@ public class CaterpillarControl : MonoBehaviour
         {
             return;
         }
-            
+
         food = GameObject.Instantiate(food);
 
         float x = Random.Range(-11.5f, 11.5f);
@@ -79,23 +107,58 @@ public class CaterpillarControl : MonoBehaviour
     }
 
     //Despawning/Eating food
-    private void OnTriggerEnter (Collider collider)   
+    private void OnTriggerEnter(Collider collider)
     {
         if (collider.gameObject.CompareTag("Lettuce"))
         {
             Destroy(food);
+            score++;
             foodExists = false;
             GrowBody();
             FoodSpawn();
         }
+
+        if (collider.gameObject.CompareTag("Stone"))
+        {
+            GameOver();
+        }
+
+        if(collider.gameObject.CompareTag("Body") && (difficultyPicked == "NORMAL" || difficultyPicked == "HARD"))
+        {
+            GameOver();
+        }
     }
 
     // Easy mode (wall hit)
+    private void EasyMode()
+    {
+        moveSpeed = 4;
+    }
 
     // Normal mode (wall hit + self hit)
+    private void NormalMode()
+    {
+        EasyMode();
+        moveSpeed = 6;
+    }
 
     // Hard mode  (wall hit + self hit + faster+ every 6 food)
+    private void HardMode()
+    {
+        NormalMode();
+        moveSpeed = 8;
+        gap = 40;
+    }
 
     // Game over
-    
+    private void GameOver()
+    {
+        foreach (GameObject part in bodyParts)
+        {
+            Destroy(part);
+        }
+        bodyParts.Clear();
+
+        SceneManager.LoadScene(2);
+    }
 }
